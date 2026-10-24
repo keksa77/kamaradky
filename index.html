@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Kamarádky Alžběty</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700&display=swap">
+<style>
+/* Layout: Vennův diagram (škola × atletika) nahoře, pod ním album vybrané kamarádky */
+:root {
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --fg: #23262d;
+  --muted: #6a6f7a;
+  --line: #e4e1da;
+  --school: #2f6fc0;
+  --school-fill: rgba(79,143,224,.18);
+  --sport: #d0661a;
+  --sport-fill: rgba(240,138,60,.18);
+  --chip: #f1eee7;
+  --gym: #7a4bc2;
+  --gym-fill: rgba(140,90,210,.16);
+  --danger: #c0392b;
+  --display: "Baloo 2", "Nunito", system-ui, sans-serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17191d; --surface: #20232a; --fg: #eceef2; --muted: #9aa0ab; --line: #343842;
+    --school: #7fb0f0; --school-fill: rgba(79,143,224,.20);
+    --sport: #f3a265; --sport-fill: rgba(240,138,60,.18);
+    --chip: #2a2e36; --danger: #ef7b6e; --gym: #b896ee; --gym-fill: rgba(150,110,220,.20); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --gym: #b896ee; --gym-fill: rgba(150,110,220,.20);
+  --bg: #17191d; --surface: #20232a; --fg: #eceef2; --muted: #9aa0ab; --line: #343842;
+  --school: #7fb0f0; --school-fill: rgba(79,143,224,.20);
+  --sport: #f3a265; --sport-fill: rgba(240,138,60,.18);
+  --chip: #2a2e36; --danger: #ef7b6e; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 5vw, 40px); margin: 0; line-height: 1.1; text-wrap: balance; }
+.hint { color: var(--muted); margin: 0; }
+.hdr-r { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.allbtn { border: 2px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 99px; padding: 7px 16px; font-weight: 700; }
+.allbtn.sel { border-color: var(--fg); }
+button { font: inherit; cursor: pointer; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--school); outline-offset: 2px; }
+
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.node { cursor: pointer; }
+.node .ring { fill: none; stroke: transparent; stroke-width: 4; }
+.node:hover .ring, .node:focus-visible .ring { stroke: var(--fg); }
+.node.sel .ring { stroke: var(--fg); }
+.node:focus { outline: none; }
+.node text { font-family: var(--body); font-weight: 700; font-size: 21px; fill: var(--fg); }
+.node .count { font-size: 14px; font-weight: 600; fill: var(--muted); }
+.grp { font-family: var(--display); font-weight: 800; font-size: 28px; }
+
+.album { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.album-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.album h2 { font-family: var(--display); font-weight: 800; font-size: 26px; margin: 0; }
+.tag { display: inline-block; font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: 99px; background: var(--chip); color: var(--muted); margin-left: 8px; vertical-align: middle; }
+.upload { display: inline-flex; align-items: center; gap: 8px; background: var(--fg); color: var(--bg); border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 700; }
+.upload[disabled] { opacity: .6; cursor: wait; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.ph { position: relative; aspect-ratio: 1; max-width: 100%; border-radius: 12px; overflow: hidden; background: var(--chip); }
+.ph img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
+.ph .acts { position: absolute; inset: auto 6px 6px 6px; display: flex; gap: 6px; justify-content: flex-end; opacity: 0; transition: opacity .15s; }
+.ph:hover .acts, .ph:focus-within .acts { opacity: 1; }
+@media (hover: none) { .ph .acts { opacity: 1; } }
+.acts button { border: 0; border-radius: 8px; padding: 5px 9px; font-size: 13px; font-weight: 700; background: rgba(20,22,26,.78); color: #fff; }
+.acts button.warn { background: var(--danger); }
+.empty { color: var(--muted); border: 2px dashed var(--line); border-radius: 12px; padding: 28px 16px; text-align: center; }
+.status { color: var(--muted); font-size: 14px; min-height: 1.2em; margin: 0; }
+
+.lightbox { position: fixed; inset: 0; background: rgba(10,10,12,.88); display: flex; align-items: center; justify-content: center; z-index: 50;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+.lightbox button { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); border: 0; border-radius: 99px; width: 44px; height: 44px; font-size: 22px; background: #fff; color: #111; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.login { max-width: 380px; margin: 12vh auto 0; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.login h1 { font-size: 32px; }
+.login input { font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+.err { color: var(--danger); margin: 0; min-height: 1.2em; font-size: 14px; }
+.logout { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; }
+</style>
+
+</head>
+<body>
+<form class="login" id="login">
+  <h1>Kamarádky Alžběty</h1>
+  <p class="hint">Stránka je chráněná heslem.</p>
+  <label for="pw">Heslo</label>
+  <input type="password" id="pw" autocomplete="current-password" required>
+  <p class="err" id="err"></p>
+  <button class="upload" type="submit" id="loginBtn">Vstoupit</button>
+</form>
+<div class="wrap" id="app" hidden>
+  <header>
+    <h1>Kamarádky Alžběty</h1>
+    <div class="hdr-r"><p class="hint">Klikněte na jméno a přidejte k němu fotky.</p><button class="allbtn" id="allBtn">Společné fotky</button><button class="logout" id="logout">Odhlásit</button></div>
+  </header>
+
+  <div class="diagram"><svg id="venn" viewBox="0 70 960 990" role="group" aria-label="Diagram kamarádek: škola, atletika a gymnastika"></svg></div>
+
+  <section class="album" aria-live="polite">
+    <div class="album-head">
+      <h2 id="aName"></h2>
+      <div>
+        <input type="file" id="fileIn" accept="image/*" multiple hidden>
+        <button class="upload" id="upBtn">+ Přidat fotky</button>
+      </div>
+    </div>
+    <p class="status" id="status"></p>
+    <div class="grid" id="grid"></div>
+  </section>
+</div>
+
+<div class="lightbox" id="lb" hidden><img id="lbImg" alt=""><button id="lbClose" aria-label="Zavřít">✕</button></div>
+
+<script>
+const API = "https://rjuxqlyckikuxfaeaozf.supabase.co/functions/v1/kamaradky";
+let GIRLS = [{ id: "spolecne", name: "Společné fotky", group: "all" }];
+function layout(girls) {
+  const by = (grp) => girls.filter(g => g.group === grp);
+  by("skola").forEach((g, i) => { g.x = 225; g.y = 230 + 80 * i; });
+  by("atletika").forEach((g, i) => { g.x = 712; g.y = 230 + 80 * i; });
+  by("obe").forEach((g, i) => { g.x = 480; g.y = 330 + 160 * i; });
+  by("gymnastika").forEach((g, i) => { g.x = 480; g.y = 740 + 75 * i; });
+  return girls;
+}
+const GROUP_LABEL = { skola: "Škola", atletika: "Atletika", obe: "Škola i atletika", gymnastika: "Gymnastika", all: "Celá parta" };
+const NS = "http://www.w3.org/2000/svg";
+let photos = {};          // girlId -> [{id, added}]
+let selected = "spolecne";
+let password = "", armedDelete = null, loading = true;
+
+const $ = (id) => document.getElementById(id);
+function el(tag, attrs = {}, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function initials(name) { return name.split(" ").map(s => s[0]).join(""); }
+function plural(n) { return n === 1 ? "1 fotka" : (n >= 2 && n <= 4) ? n + " fotky" : n + " fotek"; }
+
+function drawVenn() {
+  const svg = $("venn"); svg.textContent = "";
+  const defs = el("defs", {}, svg);
+  el("circle", { cx: 340, cy: 350, r: 262, fill: "var(--school-fill)", stroke: "var(--school)", "stroke-width": 3 }, svg);
+  el("circle", { cx: 620, cy: 350, r: 262, fill: "var(--sport-fill)", stroke: "var(--sport)", "stroke-width": 3 }, svg);
+  const t1 = el("text", { x: 230, y: 150, "text-anchor": "middle", class: "grp", fill: "var(--school)" }, svg); t1.textContent = "Škola";
+  const t2 = el("text", { x: 730, y: 150, "text-anchor": "middle", class: "grp", fill: "var(--sport)" }, svg); t2.textContent = "Atletika";
+  el("circle", { cx: 480, cy: 840, r: 205, fill: "var(--gym-fill)", stroke: "var(--gym)", "stroke-width": 3 }, svg);
+  const t3 = el("text", { x: 480, y: 690, "text-anchor": "middle", class: "grp", fill: "var(--gym)" }, svg); t3.textContent = "Gymnastika";
+
+  for (const g of GIRLS) {
+    if (!g.x) continue;
+    const list = photos[g.id] || [];
+    const center = g.group === "obe";
+    const ax = center ? g.x : g.x - (g.group === "gymnastika" ? 120 : 82), ay = center ? g.y - 10 : g.y;
+    const r = center ? 40 : 28;
+    const node = el("g", { class: "node" + (selected === g.id ? " sel" : ""), tabindex: 0, role: "button", "aria-label": g.name + ", " + plural(list.length) }, svg);
+    const cp = el("clipPath", { id: "cp-" + g.id }, defs); el("circle", { cx: ax, cy: ay, r }, cp);
+    el("circle", { cx: ax, cy: ay, r, fill: "var(--chip)", stroke: g.group === "skola" ? "var(--school)" : g.group === "atletika" ? "var(--sport)" : g.group === "gymnastika" ? "var(--gym)" : "var(--fg)", "stroke-width": 2 }, node);
+    if (list.length) {
+      el("image", { href: list[0].url, x: ax - r, y: ay - r, width: r * 2, height: r * 2, preserveAspectRatio: "xMidYMid slice", "clip-path": `url(#cp-${g.id})` }, node);
+    } else {
+      const it = el("text", { x: ax, y: ay + 7, "text-anchor": "middle", style: "font-size:18px;fill:var(--muted)" }, node); it.textContent = initials(g.name);
+    }
+    el("circle", { cx: ax, cy: ay, r: r + 4, class: "ring" }, node);
+    if (center) {
+      const [first, last] = g.name.split(" ");
+      const a = el("text", { x: g.x, y: ay + r + 28, "text-anchor": "middle" }, node); a.textContent = first;
+      const b = el("text", { x: g.x, y: ay + r + 52, "text-anchor": "middle" }, node); b.textContent = last;
+      const c = el("text", { x: g.x, y: ay + r + 74, "text-anchor": "middle", class: "count" }, node); c.textContent = list.length ? plural(list.length) : "škola i atletika";
+    } else {
+      const a = el("text", { x: ax + r + 12, y: g.y + 2 }, node); a.textContent = g.name;
+      const c = el("text", { x: ax + r + 12, y: g.y + 22, class: "count" }, node); c.textContent = list.length ? plural(list.length) : "bez fotek";
+    }
+    node.addEventListener("click", () => select(g.id));
+    node.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(g.id); } });
+  }
+  const ab = $("allBtn"); ab.textContent = "Společné fotky · " + (photos.spolecne || []).length;
+  ab.classList.toggle("sel", selected === "spolecne");
+}
+
+function select(id) { selected = id; armedDelete = null; $("status").textContent = ""; render(); }
+
+function renderAlbum() {
+  const g = GIRLS.find(x => x.id === selected);
+  const h = $("aName"); h.textContent = g.name;
+  const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = GROUP_LABEL[g.group]; h.appendChild(tag);
+  const grid = $("grid"); grid.textContent = "";
+  const list = photos[g.id] || [];
+  if (!list.length) {
+    const e = document.createElement("div"); e.className = "empty"; e.style.gridColumn = "1 / -1";
+    e.textContent = loading ? "Fotky se načítají…" : "Zatím tu nejsou žádné fotky. Přidejte první tlačítkem „+ Přidat fotky“.";
+    grid.appendChild(e); return;
+  }
+  list.forEach((p, i) => {
+    const box = document.createElement("div"); box.className = "ph";
+    const img = document.createElement("img"); img.src = p.url; img.alt = g.name + " – fotka " + (i + 1); img.loading = "lazy";
+    img.addEventListener("click", () => openLb(img.src, img.alt));
+    box.appendChild(img);
+    {
+      const acts = document.createElement("div"); acts.className = "acts";
+      if (g.id !== "spolecne" && i > 0) {
+        const m = document.createElement("button"); m.textContent = "Do kroužku";
+        m.title = "Použít jako fotku v diagramu";
+        m.addEventListener("click", () => makeMain(g.id, p.id)); acts.appendChild(m);
+      }
+      const d = document.createElement("button");
+      const armed = armedDelete === p.id;
+      d.textContent = armed ? "Opravdu smazat?" : "Smazat"; if (armed) d.className = "warn";
+      d.addEventListener("click", () => armed ? removePhoto(g.id, p.id) : (armedDelete = p.id, renderAlbum()));
+      acts.appendChild(d); box.appendChild(acts);
+    }
+    grid.appendChild(box);
+  });
+}
+function render() { drawVenn(); renderAlbum(); }
+
+function openLb(src, alt) { $("lbImg").src = src; $("lbImg").alt = alt; $("lb").hidden = false; $("lbClose").focus(); }
+$("allBtn").addEventListener("click", () => select("spolecne"));
+$("lbClose").addEventListener("click", () => $("lb").hidden = true);
+$("lb").addEventListener("click", e => { if (e.target.id === "lb") $("lb").hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("lb").hidden = true; });
+
+async function shrink(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const max = 1800, s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    if (s === 1 && file.size < 2.5e6) return file;
+    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(b => r(b || file), "image/jpeg", 0.86));
+  } catch { return file; }
+}
+async function api(action, extra = {}) {
+  const r = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password, action, ...extra }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.error || "server"); e.code = j.error; throw e; }
+  return j;
+}
+async function reload() {
+  const j = await api("list");
+  GIRLS = layout(j.girls);
+  const next = {};
+  for (const p of j.photos) (next[p.girl_id] ||= []).push(p);
+  photos = next; loading = false; render();
+}
+function toBase64(blob) {
+  return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
+}
+$("upBtn").addEventListener("click", () => $("fileIn").click());
+$("fileIn").addEventListener("change", async (e) => {
+  const files = [...e.target.files]; e.target.value = "";
+  if (!files.length) return;
+  const gid = selected, btn = $("upBtn"); btn.disabled = true;
+  let ok = 0, failed = 0;
+  for (let i = 0; i < files.length; i++) {
+    $("status").textContent = `Nahrávám ${i + 1} z ${files.length}…`;
+    try {
+      const blob = await shrink(files[i]);
+      const type = ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(blob.type) ? blob.type : null;
+      if (!type) throw new Error("type");
+      await api("upload", { girl_id: gid, contentType: type, data: await toBase64(blob) });
+      ok++;
+    } catch (err) { failed++; console.warn(err); }
+  }
+  try { await reload(); } catch {}
+  $("status").textContent = (ok ? `Přidáno: ${plural(ok)}.` : "") + (failed ? ` Nepodařilo se nahrát ${failed} soubor(ů) – zkuste formát JPG nebo PNG.` : "");
+  btn.disabled = false;
+});
+async function removePhoto(gid, pid) {
+  armedDelete = null;
+  try { await api("delete", { id: pid }); await reload(); $("status").textContent = "Fotka smazána."; }
+  catch { $("status").textContent = "Fotku se nepodařilo smazat."; renderAlbum(); }
+}
+async function makeMain(gid, pid) {
+  try { await api("main", { id: pid }); await reload(); $("status").textContent = "Fotka je teď v kroužku v diagramu."; }
+  catch { $("status").textContent = "Nepodařilo se změnit fotku v kroužku."; }
+}
+
+async function enter(pw, remember) {
+  password = pw;
+  try {
+    await reload();
+    $("login").hidden = true; $("app").hidden = false;
+    if (remember) try { localStorage.setItem("kamaradky-heslo", pw); } catch {}
+    return true;
+  } catch (e) {
+    password = "";
+    $("err").textContent = e.code === "wrong_password" ? "Špatné heslo." : e.code === "no_password_set" ? "Heslo zatím není nastavené." : "Nepodařilo se spojit se serverem. Zkuste to znovu.";
+    return false;
+  }
+}
+$("login").addEventListener("submit", async (e) => {
+  e.preventDefault(); $("err").textContent = ""; $("loginBtn").disabled = true;
+  await enter($("pw").value, true);
+  $("loginBtn").disabled = false;
+});
+$("logout").addEventListener("click", () => {
+  try { localStorage.removeItem("kamaradky-heslo"); } catch {}
+  location.reload();
+});
+setInterval(() => { if (password) reload().catch(() => {}); }, 5 * 60 * 1000);
+(async () => {
+  let saved = null; try { saved = localStorage.getItem("kamaradky-heslo"); } catch {}
+  if (saved && !(await enter(saved, false))) { try { localStorage.removeItem("kamaradky-heslo"); } catch {} $("err").textContent = ""; }
+})();
+</script>
+</body>
+</html>
